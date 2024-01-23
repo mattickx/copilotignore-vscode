@@ -1,0 +1,55 @@
+{
+  "name": "copilotignore",
+  "displayName": "CopilotIgnore",
+  "description": "Ignore files for CoPilot with .copilotignore",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage"
+  ],
+  "keywords": [
+    "copilot",
+    "copilotignore"
+  ],
+  "author": "Mathieu Magalhaes<https://github.com/mattickx>",
+  "license": "MIT",
+  "contributes": {
+    "configuration": {
+      "title": "Copilot Ignore",
+      "properties": {
+        "github.copilot.enable.*": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable Copilot"
+        }
+      }
+    }
+  },
+  "main": "./out/extension.js",
+  "scripts": {
+    "build": "rm -rf ./out ./*.vsix && npx tsc && npx vsce package",
+    "watch": "tsc -watch -p ./",
+    "pretest": "pnpm run build && pnpm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/glob-to-regexp": "^0.4.4",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "eslint": "^8.56.0",
+    "glob-to-regexp": "^0.4.1",
+    "typescript": "^5.3.3"
+  }
+}
