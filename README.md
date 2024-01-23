@@ -1,5 +1,7 @@
 # VSCode Copilot Ignore
 
+STILL IN DEVELOPMENT! DO NOT USE YET!
+
 ## Description
 The VSCode Copilot Ignore extension enhances your Visual Studio Code experience by allowing you to specify files and directories to be ignored by GitHub Copilot. This helps you customize the Copilot suggestions to focus on the code you want assistance with, making your coding experience more efficient and tailored to your needs.
 
