@@ -16,6 +16,7 @@
     "copilot",
     "copilotignore"
   ],
+  "repository": "https://github.com/mattickx/copilotignore-vscode",
   "author": "Mathieu Magalhaes<https://github.com/mattickx>",
   "license": "MIT",
   "contributes": {
