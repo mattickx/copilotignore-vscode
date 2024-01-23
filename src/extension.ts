@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import globToRegExp from 'glob-to-regexp';
 
-const COPILOT_ENABLE_CONFIG = `github.copilot.enable.*`;
+const COPILOT_ENABLE_CONFIG = `github.copilot.enable`;
 
 const log = vscode.window.createOutputChannel("CopilotIgnore");
 
@@ -35,36 +35,50 @@ function matchesAnyPattern(filename: string, patterns: string[]): boolean {
 
 // Main function to check and disable Copilot for the current workspace
 function setConfigEnabled(newStateEnabled: boolean, filePath?: string) {
-  const config = vscode.workspace.getConfiguration();
+  try {
+    const config = vscode.workspace.getConfiguration();
 
-  log.appendLine(`CopilotIgnore: Trying to set new state: (${newStateEnabled}) for file: ${filePath}`);
+    log.appendLine(`CopilotIgnore: Trying to set new state: (${newStateEnabled}) for file: ${filePath}`);
 
-  if (config.get(COPILOT_ENABLE_CONFIG) === newStateEnabled) {
-    log.appendLine(`CopilotIgnore: Skipped due to already same boolean value (${newStateEnabled})`);
-    return;
+    const currentCopilotConfig: Record<string, boolean> = {
+      ...(config.get(COPILOT_ENABLE_CONFIG) || {}),
+    };
+
+    if (currentCopilotConfig && Boolean(currentCopilotConfig['*']) === newStateEnabled) {
+      log.appendLine(`CopilotIgnore: Skipped due to already same boolean value (Old: ${currentCopilotConfig['*']} - New: ${newStateEnabled})`);
+      return;
+    }
+
+    config.update(COPILOT_ENABLE_CONFIG, { ...currentCopilotConfig, '*': newStateEnabled ? undefined : false }, vscode.ConfigurationTarget.Workspace);
+
+    log.appendLine(`CopilotIgnore: Changed state to: ${newStateEnabled}`);
+  } catch (e: any) {
+    log.appendLine(`[setConfigEnabled] Error: ${e} ${e?.stack?.toString()}`);
+    return [];
   }
-
-  config.update(COPILOT_ENABLE_CONFIG, newStateEnabled ? undefined : false, vscode.ConfigurationTarget.Workspace);
-
-  log.appendLine(`CopilotIgnore: Changed state to: ${newStateEnabled}`);
 }
 
 const getPatterns = () => {
-  const allPatterns: string[] = [];
+  try {
+    const allPatterns: string[] = [];
 
-  if (vscode.workspace.workspaceFolders?.length) {
-    vscode.workspace.workspaceFolders.forEach((folder) => {
-      const localPatterns = readIgnorePatterns(path.resolve(folder.uri.path, '.copilotignore'));
-      if (localPatterns.length) { allPatterns.push(...localPatterns); }
-    });
+    if (vscode.workspace.workspaceFolders?.length) {
+      vscode.workspace.workspaceFolders.forEach((folder) => {
+        const localPatterns = readIgnorePatterns(path.resolve(folder.uri.path, '.copilotignore'));
+        if (localPatterns.length) { allPatterns.push(...localPatterns); }
+      });
+    }
+
+    const globalPatterns = readIgnorePatterns(`${process.env.HOME}/.copilotignore`);
+    if (allPatterns.length) { allPatterns.push(...globalPatterns); }
+
+    log.appendLine(`Collected patterns: ${allPatterns.length}`);
+
+    return allPatterns;
+  } catch (e: any) {
+    log.appendLine(`[getPatterns] Error: ${e} ${e?.stack?.toString()}`);
+    return [];
   }
-
-  const globalPatterns = readIgnorePatterns(`${process.env.HOME}/.copilotignore`);
-  if (allPatterns.length) { allPatterns.push(...globalPatterns); }
-
-  log.appendLine(`Collected patterns: ${allPatterns.length}`);
-
-  return allPatterns;
 };
 
 // Register the extension's activation event
@@ -100,6 +114,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors);
   } catch (e: any) {
-    log.appendLine(`Error: ${e} ${e?.stack?.toString()}`);
+    log.appendLine(`[activate] Error: ${e} ${e?.stack?.toString()}`);
   }
 }
