@@ -18,14 +18,11 @@
   ],
   "contributes": {
     "configuration": {
-      "title": "Copilot Ignore",
+      "title": "CopilotIgnore",
       "properties": {
         "github.copilot.enable": {
           "type": "object",
-          "default": {
-            "*": true
-          },
-          "description": "Enable/disable Copilot config"
+          "description": "Enable/disable Copilot"
         }
       }
     }
