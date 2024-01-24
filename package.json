@@ -1,8 +1,8 @@
 {
   "name": "copilotignore-vscode",
-  "displayName": "CopilotIgnore",
+  "displayName": "Copilot Ignore",
   "description": "Ignore files for Copilot with .copilotignore in Visual Studio Code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -16,26 +16,41 @@
     "copilot",
     "copilotignore"
   ],
-  "repository": "https://github.com/mattickx/copilotignore-vscode",
-  "author": "Mathieu Magalhaes<https://github.com/mattickx>",
-  "license": "MIT",
   "contributes": {
     "configuration": {
       "title": "Copilot Ignore",
       "properties": {
-        "github.copilot.enable.*": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable/disable Copilot"
+        "github.copilot.enable": {
+          "type": "object",
+          "default": {
+            "*": true
+          },
+          "description": "Enable/disable Copilot config"
         }
       }
     }
   },
+  "pricing": "Free",
+  "icon": "images/icon.png",
+  "publisher": "Mattickx",
+  "homepage": "https://github.com/mattickx/copilotignore-vscode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattickx/copilotignore-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/mattickx/copilotignore-vscode/issues"
+  },
+  "author": {
+    "name": "Mathieu",
+    "url": "https://github.com/mattickx"
+  },
   "main": "./out/extension.js",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "build": "rm -rf ./out ./copilotignore-vscode-*.vsix ./copilotignore-vscode-*.tgz && npx tsc && npx vsce package",
     "watch": "tsc -watch -p ./",
-    "pretest": "pnpm run lint && pnpm run build && npm pack",
+    "pretest": "npm run lint && npm run build && npm pack",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
@@ -50,7 +65,9 @@
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.22.0",
     "eslint": "^8.56.0",
-    "glob-to-regexp": "^0.4.1",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "ignore": "^5.3.0"
   }
 }
