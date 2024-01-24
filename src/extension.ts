@@ -117,10 +117,10 @@ class Extension {
       }, {} as Record<string, boolean>);
 
       // Make sure '*' is first
-      delete newConfig['*'];
       newConfig = { '*': newStateEnabled, ...newConfig };
 
-      config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Workspace);
+      config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global);
+
       this.log.info(`[setConfigEnabled] Should Copilot be enabled: ${newStateEnabled}`);
     } catch (e) {
       this.log.info(`[setConfigEnabled] Error: ${e}`);

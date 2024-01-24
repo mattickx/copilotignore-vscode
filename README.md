@@ -8,9 +8,12 @@ The VSCode Copilot Ignore extension enhances your Visual Studio Code experience 
 
 
 ## ⚠️ Limitations
-1. As soon as you add a .copilotignore to a workspace it's an all or nothing situation. If a match is found it will overwrite your copilot settings `github.copilot.enable` (at the Workspace scope, not global) with all `false` value, be aware of this.
 
-2. Patterns of multiple .copilotignore files will simply be concatenated into one list of patterns.
+1. As soon as you your treeview contains a .copilotignore file, it's an all or nothing situation. If a match is found it will overwrite your **GLOBAL** copilot settings `github.copilot.enable` with all `false`/`true` value, be aware of this overwrite!
+
+2. If you have a `github.copilot.enable` entry in your `workspace settings` or in `.vscode/settings.json`, that would take precedent meaning this extension will not work.
+
+3. Patterns of multiple .copilotignore files will simply be concatenated into one list of patterns.
 Meaning the .copilotignore file does not work recursively based on its own path yet (like other .ignore files).
 
 
