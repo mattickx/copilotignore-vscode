@@ -2,7 +2,7 @@
   "name": "copilotignore-vscode",
   "displayName": "Copilot Ignore",
   "description": "Ignore files for Copilot with .copilotignore in Visual Studio Code",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -49,7 +49,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run lint && npm run build && npm pack",
     "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/glob-to-regexp": "^0.4.4",
