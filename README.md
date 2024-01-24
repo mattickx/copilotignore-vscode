@@ -26,7 +26,9 @@ If any file matching a pattern is open in VS Code, Copilot will be disabled.
 
 # ⚙️ Usage
 
-- Install the extension from the Visual Studio Code Marketplace.
+⚠️ _This extension is not yet published on the Visual Studio Code Marketplace! Use the "build and install from source" method_
+
+- ~~Install the extension from the Visual Studio Code Marketplace.~~
 - Create a .copilotignore file in **the root of your workspace**.
 - Specify the file patterns, directories, or files that you want Copilot to ignore in the .copilotignore file.
 - Save the file, and Copilot will adapt its suggestions accordingly.
@@ -35,7 +37,7 @@ If any file matching a pattern is open in VS Code, Copilot will be disabled.
 # 🔧 Build/Install from source
 - Clone git repository
 - Edit src/extension.ts as needed
-- Run ``npm run build```
+- Run ``npm run build``
 - Install the copilotignore-X.X.X.vsix file through vscode (right click install Extension VSIX) 
 
 # 🤝 Contribute
