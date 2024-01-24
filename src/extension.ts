@@ -1,119 +1,154 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import globToRegExp from 'glob-to-regexp';
+import ignore from 'ignore';
 
-const COPILOT_ENABLE_CONFIG = `github.copilot.enable`;
+class Extension {
+  log: vscode.LogOutputChannel;
 
-const log = vscode.window.createOutputChannel("CopilotIgnore");
+  patterns = ignore({});
 
-// Function to read ignore patterns from a file
-function readIgnorePatterns(filepath: string): string[] {
-  const patterns: string[] = [];
-  if (fs.existsSync(filepath)) {
-    const lines = fs.readFileSync(filepath, 'utf-8').split('\n');
-    for (const line of lines) {
-      patterns.push(line.trim());
+  context: vscode.ExtensionContext;
+
+  constructor(context: vscode.ExtensionContext) {
+    this.log = vscode.window.createOutputChannel("Copilot Ignore", { log: true });
+    this.context = context;
+    context.subscriptions.push(this.log);
+    this.log.info(`[constructor] Activated extension`);
+  }
+
+  initialize() {
+    try {
+      this.fillPatterns();
+
+      this.context.subscriptions.push(
+
+        // Register the event handlers for changes that trigger a re-check of the ignore patterns
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+          this.fillPatterns();
+        }),
+        vscode.workspace.onDidSaveTextDocument((file: vscode.TextDocument) => {
+          if (file.fileName.endsWith('.copilotignore')) {
+            this.fillPatterns();
+          }
+        }),
+        vscode.workspace.onDidRenameFiles(() => {
+          this.fillPatterns();
+        }),
+
+        // Register the event handlers that could triggers a state change
+        vscode.window.onDidChangeVisibleTextEditors((editors) => this.setCopilotStateBasedOnEditors(editors)),
+
+      );
+
+      // this.setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors, this.allPatterns);
+      this.log.info(`[constructor] Initialized extension`);
+    } catch (e) {
+      this.log.info(`[activate] Error: ${e}`);
     }
   }
-  return patterns;
-}
 
-// // Function to check if a file matches any simple wildcard pattern
-function matchesAnyPattern(filename: string, patterns: string[]): boolean {
-  if (!filename || !patterns?.length) {
-    return false;
-  }
-  for (const pattern of patterns) {
-    const regex = globToRegExp(pattern);
-    if (filename.match(regex)) {
-      return true;
-    }
-  }
-  return false;
-}
+  // // Function to read ignore patterns from a file
+  readIgnorePatterns(filepath: string): string[] {
+    try {
+      const patterns: string[] = [];
 
-// Main function to check and disable Copilot for the current workspace
-function setConfigEnabled(newStateEnabled: boolean, filePath?: string) {
-  try {
-    const config = vscode.workspace.getConfiguration();
-
-    log.appendLine(`CopilotIgnore: Trying to set new state: (${newStateEnabled}) for file: ${filePath}`);
-
-    const currentCopilotConfig: Record<string, boolean> = {
-      ...(config.get(COPILOT_ENABLE_CONFIG) || {}),
-    };
-
-    if (currentCopilotConfig && Boolean(currentCopilotConfig['*']) === newStateEnabled) {
-      log.appendLine(`CopilotIgnore: Skipped due to already same boolean value (Old: ${currentCopilotConfig['*']} - New: ${newStateEnabled})`);
-      return;
-    }
-
-    config.update(COPILOT_ENABLE_CONFIG, { ...currentCopilotConfig, '*': newStateEnabled ? undefined : false }, vscode.ConfigurationTarget.Workspace);
-
-    log.appendLine(`CopilotIgnore: Changed state to: ${newStateEnabled}`);
-  } catch (e: any) {
-    log.appendLine(`[setConfigEnabled] Error: ${e} ${e?.stack?.toString()}`);
-    return [];
-  }
-}
-
-const getPatterns = () => {
-  try {
-    const allPatterns: string[] = [];
-
-    if (vscode.workspace.workspaceFolders?.length) {
-      vscode.workspace.workspaceFolders.forEach((folder) => {
-        const localPatterns = readIgnorePatterns(path.resolve(folder.uri.path, '.copilotignore'));
-        if (localPatterns.length) { allPatterns.push(...localPatterns); }
-      });
-    }
-
-    const globalPatterns = readIgnorePatterns(`${process.env.HOME}/.copilotignore`);
-    if (allPatterns.length) { allPatterns.push(...globalPatterns); }
-
-    log.appendLine(`Collected patterns: ${allPatterns.length}`);
-
-    return allPatterns;
-  } catch (e: any) {
-    log.appendLine(`[getPatterns] Error: ${e} ${e?.stack?.toString()}`);
-    return [];
-  }
-};
-
-// Register the extension's activation event
-export function activate(context: vscode.ExtensionContext) {
-  let allPatterns: string[] = getPatterns();
-
-  try {
-    const setCopilotStateBasedOnEditors = (editors: readonly vscode.TextEditor[]) => {
-      const filesOpen = editors.map((editor) => editor.document.uri.fsPath);
-      const foundOpenIgnoredFile = filesOpen.find((filePath) => matchesAnyPattern(filePath, allPatterns));
-      setConfigEnabled(!foundOpenIgnoredFile, foundOpenIgnoredFile);
-    };
-
-    // Register the event handlers for changes that trigger a re-check of the ignore patterns
-    context.subscriptions.push(
-      vscode.workspace.onDidChangeWorkspaceFolders(() => {
-        allPatterns = getPatterns();
-      }),
-      vscode.workspace.onDidSaveTextDocument((file: vscode.TextDocument) => {
-        if (file.fileName.endsWith('.copilotignore')) {
-          allPatterns = getPatterns();
+      if (fs.existsSync(filepath)) {
+        this.log.info(`[readIgnorePatterns] Reading ignore patterns from: ${filepath}`);
+        const lines = fs.readFileSync(filepath, 'utf-8').split('\n');
+        for (const line of lines) {
+          patterns.push(line.trim());
         }
-      }),
-      vscode.workspace.onDidRenameFiles(() => {
-        allPatterns = getPatterns();
-      }),
-    );
+      }
 
-    // Register the event handlers that could triggers a state change
-    context.subscriptions.push(
-      vscode.window.onDidChangeVisibleTextEditors((editors) => setCopilotStateBasedOnEditors(editors)),
-    );
-
-    setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors);
-  } catch (e: any) {
-    log.appendLine(`[activate] Error: ${e} ${e?.stack?.toString()}`);
+      return patterns;
+    } catch (e) {
+      this.log.info(`[readIgnorePatterns] Error: ${e}`);
+      return [];
+    }
   }
+
+  // Function to check if a file matches any simple wildcard pattern
+  matchesAnyPattern(filePath: string): boolean {
+    try {
+      if (!filePath || filePath.includes('Mattickx.copilotignore-vscode.Copilot')) {
+        return false;
+      }
+      return this.patterns.test(filePath).ignored;
+    } catch (e) {
+      this.log.info(`[matchesAnyPattern] Error: ${e}`);
+      return false;
+    }
+  }
+
+  // // Main function to check and disable Copilot for the current workspace
+  setConfigEnabled(newStateEnabled: boolean, filePath?: string) {
+    try {
+      const COPILOT_ENABLE_CONFIG = `github.copilot.enable`;
+      const config = vscode.workspace.getConfiguration();
+
+      this.log.info(`CopilotIgnore: Trying to set new state: (${newStateEnabled}) for file: ${filePath}`);
+
+      const currentCopilotConfig: Record<string, boolean> = {
+        ...(config.get(COPILOT_ENABLE_CONFIG) || {}),
+      };
+
+      if (currentCopilotConfig && Boolean(currentCopilotConfig['*']) === newStateEnabled) {
+        this.log.info(`CopilotIgnore: Skipped due to already same boolean value (Old: ${currentCopilotConfig['*']} - New: ${newStateEnabled})`);
+        return;
+      }
+
+      config.update(COPILOT_ENABLE_CONFIG, { ...currentCopilotConfig, '*': newStateEnabled ? undefined : false }, vscode.ConfigurationTarget.Workspace);
+
+      this.log.info(`CopilotIgnore: Changed state to: ${newStateEnabled}`);
+    } catch (e) {
+      this.log.info(`[setConfigEnabled] Error: ${e}`);
+      return [];
+    }
+  }
+
+  fillPatterns() {
+    try {
+      this.patterns = ignore();
+
+      let count = 0;
+
+      if (vscode.workspace.workspaceFolders?.length) {
+        vscode.workspace.workspaceFolders.forEach((folder) => {
+          const localPatterns = this.readIgnorePatterns(path.resolve(folder.uri.path, '.copilotignore'));
+          if (localPatterns.length) {
+            this.patterns.add(localPatterns);
+            count += localPatterns.length;
+          }
+        });
+      }
+
+      if (process?.env?.HOME) {
+        const globalPatterns = this.readIgnorePatterns(`${process.env.HOME}/.copilotignore`);
+        if (globalPatterns.length) {
+          this.patterns.add(globalPatterns);
+          count += globalPatterns.length;
+        }
+      }
+
+      this.log.info(`Collected patterns: ${count}`);
+    } catch (e) {
+      this.log.info(`[fillPatterns] Error: ${e}`);
+      return [];
+    }
+  }
+
+  setCopilotStateBasedOnEditors(editors: readonly vscode.TextEditor[]) {
+    const filesOpen = editors.map((editor) => vscode.workspace.asRelativePath(editor.document.uri));
+    const foundOpenIgnoredFile = filesOpen.find((filePath) => this.matchesAnyPattern(filePath));
+    this.setConfigEnabled(!foundOpenIgnoredFile, foundOpenIgnoredFile);
+  }
+
 }
+
+export function activate(context: vscode.ExtensionContext) {
+  const extension = new Extension(context);
+  extension.initialize();
+}
+
+export function deactivate() { }
