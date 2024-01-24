@@ -32,6 +32,11 @@ class Extension {
             this.fillPatterns();
           }
         }),
+        vscode.workspace.onDidDeleteFiles((fileDeleteEvent: vscode.FileDeleteEvent) => {
+          if (fileDeleteEvent.files.find(file => file.path.endsWith('.copilotignore'))) {
+            this.fillPatterns();
+          }
+        }),
         vscode.workspace.onDidRenameFiles(() => {
           this.fillPatterns();
         }),
