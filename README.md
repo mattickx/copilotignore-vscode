@@ -12,8 +12,7 @@ Meaning the .copilotignore file does not work recursively based on its own path 
 
 ## ✅ Features
 **Ignore file:** Create a .copilotignore file in the root of a workspace to specify patterns of files and directories.
-If any file matching a pattern is open in VS Code, Copilot will be disabled.
-(This includes files open outside the current active text editor)
+If the file of the active editor matches a pattern, Copilot will be disabled.
 
 **Reactive**: Changes made to the .copilotignore file(s) are immediately reflected.
 
@@ -21,14 +20,14 @@ If any file matching a pattern is open in VS Code, Copilot will be disabled.
 
 - [x] Create a working proof of concept for .copilotignore
 - [x] Make .copilotignore file change trigger a reload of patterns
-- [ ] Upload the extension to Visual Studio Code Marketplace.
+- [x] Usage should be compatible as .gitignore
+- [x] Upload the extension to Visual Studio Code Marketplace.
+- [ ] Add option to take into account files that are open, but not in active editor. 
 - [ ] Make .copilotignore take into account it's own path/location (apply patterns recursive)
 
 # ⚙️ Usage
 
-⚠️ _This extension is not yet published on the Visual Studio Code Marketplace! Use the "build and install from source" method_
-
-- ~~Install the extension from the Visual Studio Code Marketplace.~~
+- Install the [extension](https://marketplace.visualstudio.com/items?itemName=Mattickx.copilotignore-vscode) from the Visual Studio Code Marketplace.
 - Create a .copilotignore file in **the root of your workspace**.
 - Specify the file patterns, directories, or files that you want Copilot to ignore in the .copilotignore file.
 - Save the file, and Copilot will adapt its suggestions accordingly.
@@ -38,7 +37,7 @@ If any file matching a pattern is open in VS Code, Copilot will be disabled.
 - Clone git repository
 - Edit src/extension.ts as needed
 - Run ``npm run build``
-- Install the copilotignore-X.X.X.vsix file through vscode (right click install Extension VSIX) 
+- Install the copilotignore-X.X.X.vsix file through vscode (right click install Extension VSIX)
 
 # 🤝 Contribute
 Continuous improvement is encouraged and your contributions are valuable!
