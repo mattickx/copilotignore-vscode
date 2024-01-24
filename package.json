@@ -2,7 +2,7 @@
   "name": "copilotignore-vscode",
   "displayName": "Copilot Ignore",
   "description": "Ignore files for Copilot with .copilotignore in Visual Studio Code",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "engines": {
     "vscode": "^1.85.0"
   },
