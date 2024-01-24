@@ -1,0 +1,13 @@
+.git/
+.vscode/
+DISABLE/
+node_modules/
+src/
+.copilotignore
+.eslintrc.json
+.vscodeignore
+*.vsix
+*.tgz
+debug.js
+tsconfig.json
+vsc-extension-quickstart.md

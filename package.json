@@ -1,8 +1,8 @@
 {
-  "name": "copilotignore",
+  "name": "copilotignore-vscode",
   "displayName": "CopilotIgnore",
-  "description": "Ignore files for CoPilot with .copilotignore",
-  "version": "0.0.1",
+  "description": "Ignore files for Copilot with .copilotignore in Visual Studio Code",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -33,9 +33,9 @@
   },
   "main": "./out/extension.js",
   "scripts": {
-    "build": "rm -rf ./out ./*.vsix && npx tsc && npx vsce package",
+    "build": "rm -rf ./out ./copilotignore-vscode-*.vsix ./copilotignore-vscode-*.tgz && npx tsc && npx vsce package",
     "watch": "tsc -watch -p ./",
-    "pretest": "pnpm run build && pnpm run lint",
+    "pretest": "pnpm run lint && pnpm run build && npm pack",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
