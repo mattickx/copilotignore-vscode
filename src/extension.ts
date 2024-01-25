@@ -57,7 +57,8 @@ class Extension {
 
   trigger() {
     if (this.count === 0) {
-      this.log.info(`[trigger] Pattern count is 0. Trigger ignored.`);
+      this.log.info(`[trigger] Pattern count is 0. Copilot will be enabled in settings.`);
+      this.setConfigEnabled(true);
       return;
     }
     this.setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors);
@@ -84,6 +85,7 @@ class Extension {
   }
 
   isInvalidFile(filePath: string): boolean {
+    // Ignore files that are not in the workspace or not 
     return !filePath?.length || filePath[0] === '/' || filePath.includes('Mattickx.copilotignore-vscode.Copilot') || filePath === 'undefined';
   }
 
