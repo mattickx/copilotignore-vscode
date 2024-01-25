@@ -117,7 +117,14 @@ class Extension {
       }, {} as Record<string, boolean>);
 
       // Make sure '*' is first
-      newConfig = { '*': newStateEnabled, ...newConfig };
+      newConfig = {
+        '*': newStateEnabled,
+        ...newConfig,
+        // Defaults of copilot
+        plaintext: false,
+        markdown: false,
+        scminput: false,
+      };
 
       config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global);
 
