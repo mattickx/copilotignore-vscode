@@ -64,7 +64,7 @@ class Extension {
     this.setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors);
   }
 
-  // // Function to read ignore patterns from a file
+  // Function to read ignore patterns from a file
   readIgnorePatterns(filepath: string): string[] {
     try {
       const patterns: string[] = [];
@@ -84,9 +84,20 @@ class Extension {
     }
   }
 
+  // Ignore invalid files that are not in a folder of the workspace
   isInvalidFile(filePath: string): boolean {
-    // Ignore files that are not in the workspace or not 
-    return !filePath?.length || filePath[0] === '/' || filePath.includes('Mattickx.copilotignore-vscode.Copilot') || filePath === 'undefined';
+    if (!filePath?.length || filePath === 'undefined' || filePath.includes('Mattickx.copilotignore-vscode.Copilot')) {
+      return true;
+    }
+
+    if (filePath[0] === '/') {
+      const found = vscode.workspace.workspaceFolders?.find((folder) => {
+        return filePath.includes(folder.uri.fsPath) || filePath.includes(folder.uri.path);
+      });
+      return !found;
+    }
+
+    return false;
   }
 
   // Function to check if a file matches any simple wildcard pattern
@@ -104,7 +115,7 @@ class Extension {
     }
   }
 
-  // // Main function to check and disable Copilot for the current workspace
+  // Main function to check and disable Copilot for the current workspace
   setConfigEnabled(newStateEnabled: boolean) {
     try {
       const config = vscode.workspace.getConfiguration();
@@ -144,7 +155,8 @@ class Extension {
 
       if (vscode.workspace.workspaceFolders?.length) {
         vscode.workspace.workspaceFolders.forEach((folder) => {
-          const localPatterns = this.readIgnorePatterns(path.resolve(folder.uri.path, '.copilotignore'));
+          const filePath = path.join(folder.uri.fsPath, '.copilotignore');
+          const localPatterns = this.readIgnorePatterns(filePath);
           if (localPatterns.length) {
             this.patterns.add(localPatterns);
             this.count += localPatterns.length;
@@ -153,7 +165,8 @@ class Extension {
       }
 
       if (process?.env?.HOME) {
-        const globalPatterns = this.readIgnorePatterns(`${process.env.HOME}/.copilotignore`);
+        const filePath = path.join(process.env.HOME, '.copilotignore');
+        const globalPatterns = this.readIgnorePatterns(filePath);
         if (globalPatterns.length) {
           this.patterns.add(globalPatterns);
           this.count += globalPatterns.length;
