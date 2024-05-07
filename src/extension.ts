@@ -181,7 +181,7 @@ class Extension {
   }
 
   setCopilotStateBasedOnEditors(editors: readonly vscode.TextEditor[]) {
-    const filesOpen = editors.map((editor) => vscode.workspace.asRelativePath(editor.document.uri)).filter((filePath) => !this.isInvalidFile(filePath));
+    const filesOpen = editors.map((editor) => vscode.workspace.asRelativePath(editor.document.uri.fsPath)).filter((filePath) => !this.isInvalidFile(filePath));
     if (filesOpen.length === 0) {
       return;
     }
