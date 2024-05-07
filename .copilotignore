@@ -16,7 +16,7 @@ Makefile
 Make
 MIT
 OLD
-*.OLD  
+*.OLD
 *.api
 *.apk
 *.avi
@@ -105,3 +105,4 @@ OLD
 *.yaml
 *.zip
 *.zsh
+*.ipynb
