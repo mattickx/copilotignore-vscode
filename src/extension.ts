@@ -47,6 +47,8 @@ class Extension {
         // Register the event handlers that could triggers a state change
         vscode.window.onDidChangeVisibleTextEditors(() => this.trigger()),
         vscode.window.onDidChangeActiveTextEditor(() => this.trigger()),
+        vscode.window.onDidChangeVisibleNotebookEditors(() => this.trigger()),
+        vscode.window.onDidChangeActiveNotebookEditor(() => this.trigger()),
       );
 
       this.log.info(`[initialize] Initialized extension`);
@@ -61,7 +63,7 @@ class Extension {
       this.setConfigEnabled(true);
       return;
     }
-    this.setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors);
+    this.setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors, vscode.window.visibleNotebookEditors);
   }
 
   // Function to read ignore patterns from a file
@@ -180,8 +182,11 @@ class Extension {
     }
   }
 
-  setCopilotStateBasedOnEditors(editors: readonly vscode.TextEditor[]) {
-    const filesOpen = editors.map((editor) => vscode.workspace.asRelativePath(editor.document.uri.fsPath)).filter((filePath) => !this.isInvalidFile(filePath));
+  setCopilotStateBasedOnEditors(editors: readonly vscode.TextEditor[], notebooks: readonly vscode.NotebookEditor[]) {
+    // Filter out the editors that are cells in notebooks
+    const filesOpen = editors.filter((editor) => !(editor.document.uri.scheme === 'vscode-notebook-cell')).map((editor) => vscode.workspace.asRelativePath(editor.document.uri)).filter((filePath) => !this.isInvalidFile(filePath));
+    const notebooksOpen = notebooks.map((editor) => vscode.workspace.asRelativePath(editor.notebook.uri)).filter((filePath) => !this.isInvalidFile(filePath));
+    filesOpen.push(...notebooksOpen);
     if (filesOpen.length === 0) {
       return;
     }
