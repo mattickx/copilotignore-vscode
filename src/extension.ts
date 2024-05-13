@@ -63,7 +63,7 @@ class Extension {
       this.setConfigEnabled(true);
       return;
     }
-    this.setCopilotStateBasedOnEditors(vscode.window.visibleTextEditors, vscode.window.visibleNotebookEditors);
+    this.setCopilotStateBasedOnVisibleEditors(vscode.window.visibleTextEditors, vscode.window.visibleNotebookEditors);
   }
 
   // Function to read ignore patterns from a file
@@ -182,16 +182,27 @@ class Extension {
     }
   }
 
-  setCopilotStateBasedOnEditors(editors: readonly vscode.TextEditor[], notebooks: readonly vscode.NotebookEditor[]) {
+  setCopilotStateBasedOnVisibleEditors(editors: readonly vscode.TextEditor[], notebooks: readonly vscode.NotebookEditor[]) {
     // Filter out the editors that are cells in notebooks
-    const filesOpen = editors.filter((editor) => !(editor.document.uri.scheme === 'vscode-notebook-cell')).map((editor) => vscode.workspace.asRelativePath(editor.document.uri)).filter((filePath) => !this.isInvalidFile(filePath));
-    const notebooksOpen = notebooks.map((editor) => vscode.workspace.asRelativePath(editor.notebook.uri)).filter((filePath) => !this.isInvalidFile(filePath));
-    filesOpen.push(...notebooksOpen);
+
+    const filesOpen = ([] as string[]).concat(
+      editors.filter((editor) => editor.document.uri.scheme !== 'vscode-notebook-cell').map((editor) => vscode.workspace.asRelativePath(editor.document.uri)),
+      notebooks.map((notebookEditor) => vscode.workspace.asRelativePath(notebookEditor.notebook.uri)),
+    ).filter((filePath) => !this.isInvalidFile(filePath));
+
     if (filesOpen.length === 0) {
       return;
     }
-    const foundOpenIgnoredFile = filesOpen.find((filePath) => this.matchesAnyPattern(filePath));
-    this.log.info(`[setCopilotStateBasedOnEditors] New enabled state from files: ${!foundOpenIgnoredFile}`);
+
+    let foundOpenIgnoredFile = false
+    for (const filePath of filesOpen) {
+      if (this.matchesAnyPattern(filePath)) {
+        foundOpenIgnoredFile = true;
+        break;
+      }
+    }
+
+    this.log.info(`[setCopilotStateBasedOnVisibleEditors] New enabled state from files: ${!foundOpenIgnoredFile}`);
     this.setConfigEnabled(!foundOpenIgnoredFile);
   }
 
