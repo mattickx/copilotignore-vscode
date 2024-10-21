@@ -67,23 +67,25 @@ class Extension {
   }
 
   // Function to read ignore patterns from a file
-  readIgnorePatterns(filepath: string): string[] {
+  async readIgnorePatterns(fileUri: vscode.Uri): Promise<string[]> {
+    const patterns: string[] = [];
     try {
-      const patterns: string[] = [];
-
-      if (fs.existsSync(filepath)) {
-        this.log.info(`[readIgnorePatterns] Reading ignore patterns from: ${filepath}`);
-        const lines = fs.readFileSync(filepath, 'utf-8').split('\n');
-        for (const line of lines) {
-          patterns.push(line.trim());
-        }
+      this.log.info(`[readIgnorePatterns] Reading ignore patterns from: ${fileUri}`);
+      const fileContent = await vscode.workspace.fs.readFile(fileUri);
+      const text = new TextDecoder().decode(fileContent);
+      let lines = text.split('\n');
+      for (const line of lines) {
+        patterns.push(line.trim());
       }
 
-      return patterns;
     } catch (e) {
-      this.log.info(`[readIgnorePatterns] Error: ${e}`);
-      return [];
+      if (e instanceof vscode.FileSystemError && e.code === 'FileNotFound') {
+        this.log.debug(`[readIgnorePatterns] FileNotFound: ${e}`);
+      } else {
+        this.log.info(`[readIgnorePatterns] Error: ${e}`);
+      }
     }
+    return patterns;
   }
 
   // Ignore invalid files that are not in a folder of the workspace
@@ -150,25 +152,25 @@ class Extension {
     }
   }
 
-  fillPatterns() {
+  async fillPatterns() {
     try {
       this.count = 0;
       this.patterns = ignore();
 
       if (vscode.workspace.workspaceFolders?.length) {
-        vscode.workspace.workspaceFolders.forEach((folder) => {
-          const filePath = path.join(folder.uri.fsPath, '.copilotignore');
-          const localPatterns = this.readIgnorePatterns(filePath);
+        for (const folder of vscode.workspace.workspaceFolders) {
+          const fileUri = vscode.Uri.joinPath(folder.uri, '.copilotignore');
+          const localPatterns = await this.readIgnorePatterns(fileUri);
           if (localPatterns.length) {
             this.patterns.add(localPatterns);
             this.count += localPatterns.length;
           }
-        });
+        }
       }
 
       if (process?.env?.HOME) {
-        const filePath = path.join(process.env.HOME, '.copilotignore');
-        const globalPatterns = this.readIgnorePatterns(filePath);
+        const fileUri = vscode.Uri.file(path.join(process.env.HOME, '.copilotignore'));
+        const globalPatterns = await this.readIgnorePatterns(fileUri);
         if (globalPatterns.length) {
           this.patterns.add(globalPatterns);
           this.count += globalPatterns.length;
@@ -194,7 +196,7 @@ class Extension {
       return;
     }
 
-    let foundOpenIgnoredFile = false
+    let foundOpenIgnoredFile = false;
     for (const filePath of filesOpen) {
       if (this.matchesAnyPattern(filePath)) {
         foundOpenIgnoredFile = true;
