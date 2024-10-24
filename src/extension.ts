@@ -51,6 +51,19 @@ class Extension {
         vscode.window.onDidChangeActiveNotebookEditor(() => this.trigger()),
       );
 
+      // If we have it, register the event handler for new git repositories appearing
+      // This is especially needed because whilst we register a dependency on that plugin, it activates lazily
+      // Having this also allows us to remove that dependency, should that be desirable.
+      const gitExtensions = vscode.extensions.getExtension('vscode.git');
+      if (gitExtensions) {
+        const git = gitExtensions.exports.getAPI(1);
+        this.context.subscriptions.push(
+          git.onDidOpenRepository(() => {
+            this.fillPatterns();
+          }),
+        );
+      }
+
       this.log.info(`[initialize] Initialized extension`);
     } catch (e) {
       this.log.info(`[initialize] Error: ${e}`);
@@ -150,29 +163,45 @@ class Extension {
     }
   }
 
+  getGitRepositories(): string[] {
+    const gitExtensions = vscode.extensions.getExtension('vscode.git');
+    if (gitExtensions) {
+      const git = gitExtensions.exports.getAPI(1);
+      return git.repositories.map((repo: { rootUri: vscode.Uri; }) => repo.rootUri.fsPath);
+    }
+    return [];
+  }
+
+  getWorkspaceFolders(): string[] {
+    if (vscode.workspace.workspaceFolders?.length) {
+      return vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath);
+    }
+    return [];
+  }
+
   fillPatterns() {
     try {
       this.count = 0;
       this.patterns = ignore();
 
-      if (vscode.workspace.workspaceFolders?.length) {
-        vscode.workspace.workspaceFolders.forEach((folder) => {
-          const filePath = path.join(folder.uri.fsPath, '.copilotignore');
-          const localPatterns = this.readIgnorePatterns(filePath);
-          if (localPatterns.length) {
-            this.patterns.add(localPatterns);
-            this.count += localPatterns.length;
-          }
-        });
-      }
+      let gitRepos = this.getGitRepositories();
+      this.log.info(`[fillPatterns] Git repos: ${gitRepos.length}`);
+      let workspaceFolders = this.getWorkspaceFolders();
+      this.log.info(`[fillPatterns] Workspace folders: ${workspaceFolders.length}`);
+      let folders = new Set<string>([...gitRepos, ...workspaceFolders]);
+      this.log.info(`[fillPatterns] Distinct folders: ${folders.size}`);
+      folders.forEach((folder) => {
+        const filePath = path.join(folder, '.copilotignore');
+        const localPatterns = this.readIgnorePatterns(filePath);
+        this.patterns.add(localPatterns);
+        this.count += localPatterns.length;
+      });
 
       if (process?.env?.HOME) {
         const filePath = path.join(process.env.HOME, '.copilotignore');
         const globalPatterns = this.readIgnorePatterns(filePath);
-        if (globalPatterns.length) {
-          this.patterns.add(globalPatterns);
-          this.count += globalPatterns.length;
-        }
+        this.patterns.add(globalPatterns);
+        this.count += globalPatterns.length;
       }
 
       this.log.info(`[fillPatterns] Collected patterns: ${this.count}`);

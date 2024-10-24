@@ -68,5 +68,8 @@
   },
   "dependencies": {
     "ignore": "^5.3.0"
-  }
+  },
+  "extensionDependencies": [
+    "vscode.git"
+  ]
 }

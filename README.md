@@ -22,6 +22,8 @@ Meaning the .copilotignore file does not work recursively based on its own path 
 If the file of the active editor matches a pattern, Copilot will be disabled.
 Works just like .gitignore but for copilot.
 
+**Git:** If the vscode.git extension is installed (as is default), .copilotignore files inside any git repositories will be respected.
+
 **Global file:** A global file can be used at `$HOME/.copilotignore`
 
 **Reactive**: Changes made to the .copilotignore file(s) are immediately reflected.
