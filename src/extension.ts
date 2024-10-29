@@ -134,35 +134,61 @@ class Extension {
   }
 
   // Main function to check and disable Copilot for the current workspace
-  setConfigEnabled(newStateEnabled: boolean) {
+  setConfigEnabled(newStateEnabled: boolean): boolean {
     try {
-      const config = vscode.workspace.getConfiguration()
-
-      let currentConfig: Record<string, boolean> = {
-        ...(config.get(COPILOT_ENABLE_CONFIG) || {}),
-      }
-
-      let newConfig = Object.keys(currentConfig).reduce((obj, k) => {
-        obj[k] = newStateEnabled
-        return obj
-      }, {} as Record<string, boolean>)
-
-      // Make sure '*' is first
-      newConfig = {
-        '*': newStateEnabled,
-        ...newConfig,
-        // Defaults of copilot
-        plaintext: false,
-        markdown: false,
-        scminput: false,
-      }
-
-      config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global)
-
-      this.log.info(`[setConfigEnabled] Should Copilot be enabled: ${newStateEnabled}`)
+      return (
+        this.setConfigEnabledByExtension(newStateEnabled)
+        || this.setConfigEnabledBySettings(newStateEnabled)
+      )
     } catch (e) {
       this.log.info(`[setConfigEnabled] Error: ${e}`)
-      return []
+      return false
+    }
+  }
+
+  setConfigEnabledByExtension(newStateEnabled: boolean): boolean {
+    try {
+      const copilot = vscode.extensions.getExtension('github.copilot')
+      const hasSetContext = typeof copilot?.exports?.setContext !== 'undefined'
+      if (hasSetContext) {
+        copilot?.exports.setContext('copilot:enabled', newStateEnabled)
+      }
+      return hasSetContext
+    } catch (err) {
+      return false
+    }
+  }
+
+  setConfigEnabledBySettings(newStateEnabled: boolean): boolean {
+    const config = vscode.workspace.getConfiguration()
+
+    let currentConfig: Record<string, boolean> = {
+      ...(config.get(COPILOT_ENABLE_CONFIG) || {}),
+    }
+
+    let newConfig = Object.keys(currentConfig).reduce((obj, k) => {
+      obj[k] = newStateEnabled
+      return obj
+    }, {} as Record<string, boolean>)
+
+    // Make sure '*' is first
+    newConfig = {
+      '*': newStateEnabled,
+      ...newConfig,
+      // Defaults of copilot
+      plaintext: false,
+      markdown: false,
+      scminput: false,
+    }
+
+    this.log.info(`[setConfigEnabled] Should Copilot be enabled: ${newStateEnabled}`)
+    try {
+      config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global).then(() => {
+        this.log.info(`[setConfigEnabled] New enabled state: ${newStateEnabled}`)
+      })
+      return true
+    } catch (err) {
+      return false
     }
   }
 
