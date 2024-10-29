@@ -1,9 +1,17 @@
 import * as vscode from 'vscode'
-import * as fs from 'fs'
 import * as path from 'path'
 import ignore from 'ignore'
 
 const COPILOT_ENABLE_CONFIG = `github.copilot.enable`
+
+function debounce(func: Function, timeout = 100): Function {
+  let timer: any
+  return (...args: any[]) => {
+    clearTimeout(timer)
+    // @ts-ignore
+    timer = setTimeout(() => { func.apply(this, args) }, timeout)
+  }
+}
 
 class Extension {
   log: vscode.LogOutputChannel
@@ -14,10 +22,15 @@ class Extension {
 
   context: vscode.ExtensionContext
 
+  trigger: Function
+
   constructor(context: vscode.ExtensionContext) {
     this.log = vscode.window.createOutputChannel("Copilot Ignore", { log: true })
     this.context = context
     context.subscriptions.push(this.log)
+
+    this.trigger = debounce(this._trigger, 100)
+
     this.log.info(`[constructor] Activated extension`)
   }
 
@@ -45,10 +58,10 @@ class Extension {
         }),
 
         // Register the event handlers that could triggers a state change
-        vscode.window.onDidChangeVisibleTextEditors(() => this.trigger()),
-        vscode.window.onDidChangeActiveTextEditor(() => this.trigger()),
-        vscode.window.onDidChangeVisibleNotebookEditors(() => this.trigger()),
-        vscode.window.onDidChangeActiveNotebookEditor(() => this.trigger()),
+        vscode.window.onDidChangeVisibleTextEditors(() => this.trigger('onDidChangeVisibleTextEditors')),
+        // vscode.window.onDidChangeActiveTextEditor(() => this.trigger('onDidChangeActiveTextEditor')),
+        vscode.window.onDidChangeVisibleNotebookEditors(() => this.trigger('onDidChangeVisibleNotebookEditors')),
+        // vscode.window.onDidChangeActiveNotebookEditor(() => this.trigger('onDidChangeActiveNotebookEditor')),
       )
 
       this.log.info(`[initialize] Initialized extension`)
@@ -57,7 +70,8 @@ class Extension {
     }
   }
 
-  trigger() {
+  _trigger(triggerName: string) {
+    this.log.info(`[trigger] Triggered by: ${triggerName}`)
     if (this.count === 0) {
       this.log.info(`[trigger] Pattern count is 0. Copilot will be enabled in settings.`)
       this.setConfigEnabled(true)
