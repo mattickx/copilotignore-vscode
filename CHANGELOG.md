@@ -2,9 +2,15 @@
 
 All notable changes to the "copilotignore" extension will be documented in this file.
 
+## [0.1.7] - 2024-10-29
+
+- Greatly improve functionallity of state change, by using the copilot extension context ([26b073f](https://github.com/mattickx/copilotignore-vscode/commit/26b073f5d103810695b75d39c03ddda070508bed))
+- Fix trigger being called multiple times at once ([f2f40e1](https://github.com/mattickx/copilotignore-vscode/commit/f2f40e1ff227caa84c1650291120dbd0164bf932))
+- Use vscode fs api for compatibility in remote environments ([#8](https://github.com/mattickx/copilotignore-vscode/pull/8/files))
+
 ## [0.1.6] - 2024-05-13
 
-- Fix related to ipynb files ([#6](https://github.com/mattickx/copilotignore-vscode/pull/6) by @guzy0324)
+- Fix related to ipynb files ([#6](https://github.com/mattickx/copilotignore-vscode/pull/6/files) by @guzy0324)
 
 ## [0.1.5] - 2024-01-26
 
