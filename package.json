@@ -4,7 +4,7 @@
   "description": "Ignore files for Copilot with .copilotignore in Visual Studio Code",
   "version": "0.1.6",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.94.0"
   },
   "categories": [
     "Other"
@@ -57,12 +57,12 @@
     "@types/glob-to-regexp": "^0.4.4",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.94.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8",
-    "@vscode/vsce": "^2.22.0",
+    "@vscode/vsce": "^3.2.1",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
   },

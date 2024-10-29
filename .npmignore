@@ -11,3 +11,5 @@ src/
 debug.js
 tsconfig.json
 vsc-extension-quickstart.md
+DISABLE/
+DISABLE-RECURSIVE/
