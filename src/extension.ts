@@ -29,7 +29,7 @@ class Extension {
     this.context = context
     context.subscriptions.push(this.log)
 
-    this.trigger = this.debounce(this._trigger.bind(this), 100)
+    this.trigger = debounce(this._trigger.bind(this), 100)
 
     this.log.info(`[constructor] Activated extension`)
   }
