@@ -29,7 +29,7 @@ class Extension {
     this.context = context
     context.subscriptions.push(this.log)
 
-    this.trigger = debounce(this._trigger, 100)
+    this.trigger = debounce(this._trigger.bind(this), 100)
 
     this.log.info(`[constructor] Activated extension`)
   }
@@ -151,7 +151,7 @@ class Extension {
       const copilot = vscode.extensions.getExtension('github.copilot')
       const hasSetContext = typeof copilot?.exports?.setContext !== 'undefined'
       if (hasSetContext) {
-        copilot?.exports.setContext('copilot:enabled', newStateEnabled)
+        copilot.exports.setContext('copilot:enabled', newStateEnabled)
       }
       return hasSetContext
     } catch (err) {
