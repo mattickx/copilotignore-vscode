@@ -4,6 +4,15 @@ import ignore from 'ignore'
 
 const COPILOT_ENABLE_CONFIG = `github.copilot.enable`
 
+function debounce(func: Function, timeout = 100): Function {
+  let timer: any
+  return (...args: any[]) => {
+    clearTimeout(timer)
+    // @ts-ignore
+    timer = setTimeout(() => { func.apply(this, args) }, timeout)
+  }
+}
+
 class Extension {
   log: vscode.LogOutputChannel
 
@@ -20,18 +29,9 @@ class Extension {
     this.context = context
     context.subscriptions.push(this.log)
 
-    this.trigger = this.debounce(this._trigger, 100)
+    this.trigger = this.debounce(this._trigger.bind(this), 100)
 
     this.log.info(`[constructor] Activated extension`)
-  }
-
-  debounce(func: Function, timeout = 100): Function {
-    let timer: any
-    return (...args: any[]) => {
-      clearTimeout(timer)
-      // @ts-ignore
-      timer = setTimeout(() => { func.apply(this, args) }, timeout)
-    }
   }
 
   initialize() {
