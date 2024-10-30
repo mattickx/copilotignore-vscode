@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
-import ignore from 'ignore'
+import * as ignore from 'ignore'
 
 const COPILOT_ENABLE_CONFIG = `github.copilot.enable`
 
@@ -18,7 +18,7 @@ class Extension {
 
   count: number = 0
 
-  patterns = ignore({})
+  patterns = new Map<string, ignore.Ignore>()
 
   context: vscode.ExtensionContext
 
@@ -29,7 +29,7 @@ class Extension {
     this.context = context
     context.subscriptions.push(this.log)
 
-    this.trigger = debounce(this._trigger, 100)
+    this.trigger = this._trigger //debounce(this._trigger, 100) // https://github.com/mattickx/copilotignore-vscode/issues/11
 
     this.log.info(`[constructor] Activated extension`)
   }
@@ -89,7 +89,10 @@ class Extension {
       const text = new TextDecoder().decode(fileContent)
       let lines = text.split('\n')
       for (const line of lines) {
-        patterns.push(line.trim())
+        // We need to skip whitespace only lines
+        if (line) {
+          patterns.push(line.trim())
+        }
       }
 
     } catch (e) {
@@ -124,9 +127,16 @@ class Extension {
       if (this.isInvalidFile(filePath)) {
         return false
       }
-      const result = this.patterns.test(filePath).ignored
-      this.log.info(`[matchesAnyPattern] Does ${filePath} match: ${result}`)
-      return result
+      for (const [folder, patterns] of this.patterns) {
+        if (filePath.startsWith(folder)) {
+          const result = patterns.test(filePath.replace(folder, '').replace(/^\//, '')).ignored
+          if (result) {
+            this.log.info(`[matchesAnyPattern] Does ${filePath} match: ${result}`)
+            return result
+          }
+        }
+      }
+      return false
     } catch (e) {
       this.log.info(`[matchesAnyPattern] Error: ${e}`)
       return false
@@ -192,19 +202,42 @@ class Extension {
     }
   }
 
+  async findIgnoreFiles(root: vscode.Uri, folder: vscode.Uri) {
+    const directories = await vscode.workspace.fs.readDirectory(folder)
+    // Find all directories inside folder
+    // recurse this function for folders.
+    // limitation: this will *not* follow symbolic links, but this means we don't need to check for loops.
+    for (const [name, type] of directories) {
+      if (type === vscode.FileType.Directory) {
+        const dirUri = vscode.Uri.joinPath(folder, name)
+        await this.findIgnoreFiles(root, dirUri)
+      }
+      if (name === '.copilotignore') {
+        const fileUri = vscode.Uri.joinPath(folder, '.copilotignore')
+        const localPatterns = await this.readIgnorePatterns(fileUri)
+        if (localPatterns.length) {
+          // These patterns are as read from the file. If file is in root of workspace, this is as expected.
+          // If file is in a subfolder, we need to prefix appropriately.
+          const relativePath = folder.fsPath.replace(root.fsPath, '').replace(/^\//, '')
+          let patterns = ignore.default()
+          patterns.add(localPatterns)
+          this.log.info(`[findIgnoreFiles] relativePath ${relativePath} has ${localPatterns.length} patterns`)
+          this.patterns.set(relativePath, patterns)
+          this.count += localPatterns.length
+        }
+      }
+    }
+  }
+
   async fillPatterns() {
     try {
       this.count = 0
-      this.patterns = ignore()
+      this.patterns.clear()
+      this.patterns.set("", ignore.default())
 
       if (vscode.workspace.workspaceFolders?.length) {
         for (const folder of vscode.workspace.workspaceFolders) {
-          const fileUri = vscode.Uri.joinPath(folder.uri, '.copilotignore')
-          const localPatterns = await this.readIgnorePatterns(fileUri)
-          if (localPatterns.length) {
-            this.patterns.add(localPatterns)
-            this.count += localPatterns.length
-          }
+          await this.findIgnoreFiles(folder.uri, folder.uri)
         }
       }
 
@@ -212,7 +245,7 @@ class Extension {
         const fileUri = vscode.Uri.file(path.join(process.env.HOME, '.copilotignore'))
         const globalPatterns = await this.readIgnorePatterns(fileUri)
         if (globalPatterns.length) {
-          this.patterns.add(globalPatterns)
+          this.patterns.get("")?.add(globalPatterns)
           this.count += globalPatterns.length
         }
       }
