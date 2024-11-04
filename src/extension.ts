@@ -85,14 +85,16 @@ class Extension {
   async readIgnorePatterns(fileUri: vscode.Uri): Promise<string[]> {
     const patterns: string[] = []
     try {
+      this.log.info(`----------------------------------------`)
       this.log.info(`[readIgnorePatterns] Reading ignore patterns from: ${fileUri}`)
       const fileContent = await vscode.workspace.fs.readFile(fileUri)
       const text = new TextDecoder().decode(fileContent)
       let lines = text.split('\n')
       for (const line of lines) {
         // We need to skip whitespace only lines
-        if (line) {
-          patterns.push(line.trim())
+        const pattern = line.trim()
+        if (pattern) {
+          patterns.push(pattern)
         }
       }
 
@@ -124,24 +126,26 @@ class Extension {
 
   // Function to check if a file matches any simple wildcard pattern
   matchesAnyPattern(filePath: string): boolean {
+    let result = false
     try {
       if (this.isInvalidFile(filePath)) {
         return false
       }
       for (const [folder, patterns] of this.patterns) {
         if (filePath.startsWith(folder)) {
-          const result = patterns.test(filePath.replace(folder, '').replace(/^\//, '')).ignored
+          result = patterns.test(filePath.replace(folder, '').replace(/^\//, '')).ignored
           if (result) {
-            this.log.info(`[matchesAnyPattern] Does ${filePath} match: ${result}`)
+            this.log.info(`[matchesAnyPattern] Does ${filePath}, from: ./${folder}, match: ${result}`)
             return result
           }
         }
       }
-      return false
     } catch (e) {
       this.log.info(`[matchesAnyPattern] Error: ${e}`)
       return false
     }
+    this.log.info(`[matchesAnyPattern] Does ${filePath} match: ${result}`)
+    return result
   }
 
   // Main function to check and disable Copilot for the current workspace
