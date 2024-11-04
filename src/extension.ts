@@ -2,7 +2,8 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import * as ignore from 'ignore'
 
-const COPILOT_ENABLE_CONFIG = `github.copilot.enable`
+const COPILOT_ENABLE_CONFIG = 'github.copilot.enable'
+const COPILOT_EXTENSION_ID = 'GitHub.copilot'
 
 function debounce(func: Function, timeout = 100): Function {
   let timer: any
@@ -65,17 +66,20 @@ class Extension {
         // vscode.window.onDidChangeActiveNotebookEditor(() => this.trigger('onDidChangeActiveNotebookEditor')),
       )
 
+      this.trigger('initialize')
+
       this.log.info(`[initialize] Initialized extension`)
     } catch (e) {
       this.log.info(`[initialize] Error: ${e}`)
     }
   }
 
-  _trigger(triggerName: string) {
+  async _trigger(triggerName: string) {
+    this.log.info(`----------------------------------------`)
     this.log.info(`[trigger] Triggered by: ${triggerName}`)
     if (this.count === 0) {
       this.log.info(`[trigger] Pattern count is 0. Copilot will be enabled in settings.`)
-      this.setConfigEnabled(true)
+      await this.setConfigEnabled(true)
       return
     }
     this.setCopilotStateBasedOnVisibleEditors(vscode.window.visibleTextEditors, vscode.window.visibleNotebookEditors)
@@ -149,32 +153,45 @@ class Extension {
   }
 
   // Main function to check and disable Copilot for the current workspace
-  setConfigEnabled(newStateEnabled: boolean): boolean {
+  async setConfigEnabled(newStateEnabled: boolean): Promise<boolean> {
+    let done = false
     try {
-      return (
-        this.setConfigEnabledByExtension(newStateEnabled)
-        || this.setConfigEnabledBySettings(newStateEnabled)
-      )
+      done = await this.setConfigEnabledByExtension(newStateEnabled)
+      if (!done) {
+        done = await this.setConfigEnabledBySettings(newStateEnabled)
+      }
     } catch (e) {
       this.log.info(`[setConfigEnabled] Error: ${e}`)
-      return false
     }
+    return done
   }
 
-  setConfigEnabledByExtension(newStateEnabled: boolean): boolean {
+  async setConfigEnabledByExtension(newStateEnabled: boolean): Promise<boolean> {
+    this.log.info(`[setConfigEnabledByExtension] Should Copilot be enabled: ${newStateEnabled}`)
+
+    const copilot = vscode.extensions.getExtension(COPILOT_EXTENSION_ID)
+    if (!copilot) {
+      this.log.info(`[setConfigEnabledByExtension] Error: Copilot extension not found`)
+      return false
+    }
+
     try {
-      const copilot = vscode.extensions.getExtension('github.copilot')
       const hasSetContext = typeof copilot?.exports?.setContext !== 'undefined'
       if (hasSetContext) {
-        copilot.exports.setContext('copilot:enabled', newStateEnabled)
+        this.log.info(`[setConfigEnabledByExtension] Config set by setContext, new state: ${newStateEnabled}`)
+        // @NOTE: This used to work till 10/2024, but it seems it might be broken since 11/2024
+        // setContext is not available in the API anymore
+        await copilot.exports.setContext('copilot:enabled', newStateEnabled)
+        return true
       }
-      return hasSetContext
-    } catch (err) {
-      return false
+    } catch (e) {
+      this.log.info(`[setConfigEnabledByExtension] Error: ${e}`)
     }
+    this.log.info(`[setConfigEnabledByExtension] Config unable to set by extension`)
+    return false
   }
 
-  setConfigEnabledBySettings(newStateEnabled: boolean): boolean {
+  async setConfigEnabledBySettings(newStateEnabled: boolean): Promise<boolean> {
     const config = vscode.workspace.getConfiguration()
 
     let currentConfig: Record<string, boolean> = {
@@ -196,15 +213,17 @@ class Extension {
       scminput: false,
     }
 
-    this.log.info(`[setConfigEnabled] Should Copilot be enabled: ${newStateEnabled}`)
+    this.log.info(`[setConfigEnabledBySettings] Should Copilot be enabled: ${newStateEnabled}`)
     try {
-      config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global).then(() => {
-        this.log.info(`[setConfigEnabled] New enabled state: ${newStateEnabled}`)
-      })
+      this.log.info(`[setConfigEnabledBySettings] Config set by ConfigurationTarget.Global, new state: ${newStateEnabled}`)
+      await config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global)
       return true
-    } catch (err) {
-      return false
+    } catch (e) {
+      this.log.info(`[setConfigEnabledBySettings] Error: ${e}`)
     }
+    this.log.info(`[setConfigEnabledBySettings] Config unable to set by extension`)
+    return false
+  }
   }
 
   async findIgnoreFiles(root: vscode.Uri, folder: vscode.Uri) {
