@@ -1,6 +1,5 @@
 .git/
 .vscode/
-DISABLE/
 node_modules/
 src/
 .copilotignore
@@ -11,5 +10,4 @@ src/
 debug.js
 tsconfig.json
 vsc-extension-quickstart.md
-DISABLE/
-DISABLE-RECURSIVE/
+test/
