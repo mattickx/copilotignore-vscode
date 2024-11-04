@@ -163,6 +163,10 @@ class Extension {
     } catch (e) {
       this.log.info(`[setConfigEnabled] Error: ${e}`)
     }
+    if (!newStateEnabled) {
+      this.closeAllCopilotWindows()
+    }
+    this.refreshStatusBarCopilot()
     return done
   }
 
@@ -224,6 +228,29 @@ class Extension {
     this.log.info(`[setConfigEnabledBySettings] Config unable to set by extension`)
     return false
   }
+
+  async closeAllCopilotWindows() {
+    // @TODO: This does not work as intended
+    //        This should close all panels/chats/suggestions related to copilot
+
+    // await vscode.commands.executeCommand('workbench.action.chat.cancel')
+    // await vscode.commands.executeCommand('workbench.action.quickchat.close')
+    // await vscode.commands.executeCommand('inlineChat.close')
+
+    // await vscode.commands.executeCommand('workbench.action.terminal.chat.cancel')
+    // await vscode.commands.executeCommand('workbench.action.terminal.chat.discard')
+    // await vscode.commands.executeCommand('workbench.action.terminal.chat.close')
+
+    // await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.removeView')
+    // await vscode.commands.executeCommand('workbench.panel.chat.view.edits.removeView')
+    // await vscode.commands.executeCommand('workbench.chat.movedView.welcomeView.removeView')
+  }
+
+  async refreshStatusBarCopilot() {
+    // @TODO: This does not work as intended
+    //        This should refresh copilot icon state in the status bar, as it does not reflect the changes immediately 
+
+    // await vscode.commands.executeCommand('workbench.extensions.action.refreshExtension', [COPILOT_EXTENSION_ID])
   }
 
   async findIgnoreFiles(root: vscode.Uri, folder: vscode.Uri) {
@@ -304,7 +331,6 @@ class Extension {
     this.log.info(`[setCopilotStateBasedOnVisibleEditors] New enabled state from files: ${!foundOpenIgnoredFile}`)
     this.setConfigEnabled(!foundOpenIgnoredFile)
   }
-
 }
 
 export function activate(context: vscode.ExtensionContext) {

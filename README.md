@@ -30,8 +30,10 @@ Works just like .gitignore but for copilot.
 - [x] Make .copilotignore file change trigger a reload of patterns
 - [x] Usage should be compatible as .gitignore
 - [x] Upload the extension to Visual Studio Code Marketplace.
-- [ ] Add option to take into account files that are open, but not in active editor.
 - [x] Make .copilotignore take into account it's own path/location (apply patterns recursive)
+- [ ] Add option to take into account files that are open, but not in active/visible editor.
+- [ ] Implement closeAllCopilotWindows as intended (closing copilot panels when disabled by the extension)
+- [ ] Implement refreshStatusBarCopilot as intended (when state is toggled with setConfigEnabledBySettings, the sidebar does not render the correct copilot state immediately)
 
 
 # ⚙️ Usage
