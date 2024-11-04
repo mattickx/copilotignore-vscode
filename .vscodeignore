@@ -11,3 +11,7 @@ vsc-extension-quickstart.md
 **/.vscode-test.*
 DISABLE/
 DISABLE-RECURSIVE/
+DISABLE-CHILD/
+.copilotignore
+.npmignore
+node_modules/ignore/legacy.js

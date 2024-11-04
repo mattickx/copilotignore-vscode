@@ -13,12 +13,9 @@ The VSCode Copilot Ignore extension enhances your Visual Studio Code experience 
 
 2. If you have a `github.copilot.enable` entry in your `workspace settings` or in `.vscode/settings.json`, that would take precedent meaning this extension will not work.
 
-3. Patterns of multiple .copilotignore files will simply be concatenated into one list of patterns.
-Meaning the .copilotignore file does not work recursively based on its own path yet (like other .ignore files).
-
 
 ## ✅ Features
-**Ignore file:** Create a .copilotignore file in the root of a workspace to specify patterns of files and directories.
+**Ignore file:** Create a .copilotignore file anywhere in open workspace to specify patterns of files and directories. Patterns will apply relative to where they are defined.
 If the file of the active editor matches a pattern, Copilot will be disabled.
 Works just like .gitignore but for copilot.
 
@@ -33,8 +30,10 @@ Works just like .gitignore but for copilot.
 - [x] Make .copilotignore file change trigger a reload of patterns
 - [x] Usage should be compatible as .gitignore
 - [x] Upload the extension to Visual Studio Code Marketplace.
-- [ ] Add option to take into account files that are open, but not in active editor.
-- [ ] Make .copilotignore take into account it's own path/location (apply patterns recursive)
+- [x] Make .copilotignore take into account it's own path/location (apply patterns recursive)
+- [ ] Add option to take into account files that are open, but not in active/visible editor.
+- [ ] Implement closeAllCopilotWindows as intended (closing copilot panels when disabled by the extension)
+- [ ] Implement refreshStatusBarCopilot as intended (when state is toggled with setConfigEnabledBySettings, the sidebar does not render the correct copilot state immediately)
 
 
 # ⚙️ Usage

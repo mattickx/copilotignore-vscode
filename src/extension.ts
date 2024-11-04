@@ -1,8 +1,9 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
-import ignore from 'ignore'
+import * as ignore from 'ignore'
 
-const COPILOT_ENABLE_CONFIG = `github.copilot.enable`
+const COPILOT_ENABLE_CONFIG = 'github.copilot.enable'
+const COPILOT_EXTENSION_ID = 'GitHub.copilot'
 
 function debounce(func: Function, timeout = 100): Function {
   let timer: any
@@ -18,7 +19,7 @@ class Extension {
 
   count: number = 0
 
-  patterns = ignore({})
+  patterns = new Map<string, ignore.Ignore>()
 
   context: vscode.ExtensionContext
 
@@ -26,6 +27,7 @@ class Extension {
 
   constructor(context: vscode.ExtensionContext) {
     this.log = vscode.window.createOutputChannel("Copilot Ignore", { log: true })
+
     this.context = context
     context.subscriptions.push(this.log)
 
@@ -64,17 +66,20 @@ class Extension {
         // vscode.window.onDidChangeActiveNotebookEditor(() => this.trigger('onDidChangeActiveNotebookEditor')),
       )
 
+      this.trigger('initialize')
+
       this.log.info(`[initialize] Initialized extension`)
     } catch (e) {
       this.log.info(`[initialize] Error: ${e}`)
     }
   }
 
-  _trigger(triggerName: string) {
+  async _trigger(triggerName: string) {
+    this.log.info(`----------------------------------------`)
     this.log.info(`[trigger] Triggered by: ${triggerName}`)
     if (this.count === 0) {
       this.log.info(`[trigger] Pattern count is 0. Copilot will be enabled in settings.`)
-      this.setConfigEnabled(true)
+      await this.setConfigEnabled(true)
       return
     }
     this.setCopilotStateBasedOnVisibleEditors(vscode.window.visibleTextEditors, vscode.window.visibleNotebookEditors)
@@ -84,12 +89,17 @@ class Extension {
   async readIgnorePatterns(fileUri: vscode.Uri): Promise<string[]> {
     const patterns: string[] = []
     try {
+      this.log.info(`----------------------------------------`)
       this.log.info(`[readIgnorePatterns] Reading ignore patterns from: ${fileUri}`)
       const fileContent = await vscode.workspace.fs.readFile(fileUri)
       const text = new TextDecoder().decode(fileContent)
       let lines = text.split('\n')
       for (const line of lines) {
-        patterns.push(line.trim())
+        // We need to skip whitespace only lines
+        const pattern = line.trim()
+        if (pattern) {
+          patterns.push(pattern)
+        }
       }
 
     } catch (e) {
@@ -120,46 +130,72 @@ class Extension {
 
   // Function to check if a file matches any simple wildcard pattern
   matchesAnyPattern(filePath: string): boolean {
+    let result = false
     try {
       if (this.isInvalidFile(filePath)) {
         return false
       }
-      const result = this.patterns.test(filePath).ignored
-      this.log.info(`[matchesAnyPattern] Does ${filePath} match: ${result}`)
-      return result
+      for (const [folder, patterns] of this.patterns) {
+        if (filePath.startsWith(folder)) {
+          result = patterns.test(filePath.replace(folder, '').replace(/^\//, '')).ignored
+          if (result) {
+            this.log.info(`[matchesAnyPattern] Does ${filePath}, from: ./${folder}, match: ${result}`)
+            return result
+          }
+        }
+      }
     } catch (e) {
       this.log.info(`[matchesAnyPattern] Error: ${e}`)
       return false
     }
+    this.log.info(`[matchesAnyPattern] Does ${filePath} match: ${result}`)
+    return result
   }
 
   // Main function to check and disable Copilot for the current workspace
-  setConfigEnabled(newStateEnabled: boolean): boolean {
+  async setConfigEnabled(newStateEnabled: boolean): Promise<boolean> {
+    let done = false
     try {
-      return (
-        this.setConfigEnabledByExtension(newStateEnabled)
-        || this.setConfigEnabledBySettings(newStateEnabled)
-      )
+      done = await this.setConfigEnabledByExtension(newStateEnabled)
+      if (!done) {
+        done = await this.setConfigEnabledBySettings(newStateEnabled)
+      }
     } catch (e) {
       this.log.info(`[setConfigEnabled] Error: ${e}`)
-      return false
     }
+    if (!newStateEnabled) {
+      this.closeAllCopilotWindows()
+    }
+    this.refreshStatusBarCopilot()
+    return done
   }
 
-  setConfigEnabledByExtension(newStateEnabled: boolean): boolean {
+  async setConfigEnabledByExtension(newStateEnabled: boolean): Promise<boolean> {
+    this.log.info(`[setConfigEnabledByExtension] Should Copilot be enabled: ${newStateEnabled}`)
+
+    const copilot = vscode.extensions.getExtension(COPILOT_EXTENSION_ID)
+    if (!copilot) {
+      this.log.info(`[setConfigEnabledByExtension] Error: Copilot extension not found`)
+      return false
+    }
+
     try {
-      const copilot = vscode.extensions.getExtension('github.copilot')
       const hasSetContext = typeof copilot?.exports?.setContext !== 'undefined'
       if (hasSetContext) {
-        copilot.exports.setContext('copilot:enabled', newStateEnabled)
+        this.log.info(`[setConfigEnabledByExtension] Config set by setContext, new state: ${newStateEnabled}`)
+        // @NOTE: This used to work till 10/2024, but it seems it might be broken since 11/2024
+        // setContext is not available in the API anymore
+        await copilot.exports.setContext('copilot:enabled', newStateEnabled)
+        return true
       }
-      return hasSetContext
-    } catch (err) {
-      return false
+    } catch (e) {
+      this.log.info(`[setConfigEnabledByExtension] Error: ${e}`)
     }
+    this.log.info(`[setConfigEnabledByExtension] Config unable to set by extension`)
+    return false
   }
 
-  setConfigEnabledBySettings(newStateEnabled: boolean): boolean {
+  async setConfigEnabledBySettings(newStateEnabled: boolean): Promise<boolean> {
     const config = vscode.workspace.getConfiguration()
 
     let currentConfig: Record<string, boolean> = {
@@ -181,30 +217,78 @@ class Extension {
       scminput: false,
     }
 
-    this.log.info(`[setConfigEnabled] Should Copilot be enabled: ${newStateEnabled}`)
+    this.log.info(`[setConfigEnabledBySettings] Should Copilot be enabled: ${newStateEnabled}`)
     try {
-      config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global).then(() => {
-        this.log.info(`[setConfigEnabled] New enabled state: ${newStateEnabled}`)
-      })
+      this.log.info(`[setConfigEnabledBySettings] Config set by ConfigurationTarget.Global, new state: ${newStateEnabled}`)
+      await config.update(COPILOT_ENABLE_CONFIG, newConfig, vscode.ConfigurationTarget.Global)
       return true
-    } catch (err) {
-      return false
+    } catch (e) {
+      this.log.info(`[setConfigEnabledBySettings] Error: ${e}`)
+    }
+    this.log.info(`[setConfigEnabledBySettings] Config unable to set by extension`)
+    return false
+  }
+
+  async closeAllCopilotWindows() {
+    // @TODO: This does not work as intended
+    //        This should close all panels/chats/suggestions related to copilot
+
+    // await vscode.commands.executeCommand('workbench.action.chat.cancel')
+    // await vscode.commands.executeCommand('workbench.action.quickchat.close')
+    // await vscode.commands.executeCommand('inlineChat.close')
+
+    // await vscode.commands.executeCommand('workbench.action.terminal.chat.cancel')
+    // await vscode.commands.executeCommand('workbench.action.terminal.chat.discard')
+    // await vscode.commands.executeCommand('workbench.action.terminal.chat.close')
+
+    // await vscode.commands.executeCommand('workbench.panel.chat.view.copilot.removeView')
+    // await vscode.commands.executeCommand('workbench.panel.chat.view.edits.removeView')
+    // await vscode.commands.executeCommand('workbench.chat.movedView.welcomeView.removeView')
+  }
+
+  async refreshStatusBarCopilot() {
+    // @TODO: This does not work as intended
+    //        This should refresh copilot icon state in the status bar, as it does not reflect the changes immediately 
+
+    // await vscode.commands.executeCommand('workbench.extensions.action.refreshExtension', [COPILOT_EXTENSION_ID])
+  }
+
+  async findIgnoreFiles(root: vscode.Uri, folder: vscode.Uri) {
+    const directories = await vscode.workspace.fs.readDirectory(folder)
+    // Find all directories inside folder
+    // recurse this function for folders.
+    // limitation: this will *not* follow symbolic links, but this means we don't need to check for loops.
+    for (const [name, type] of directories) {
+      if (type === vscode.FileType.Directory) {
+        const dirUri = vscode.Uri.joinPath(folder, name)
+        await this.findIgnoreFiles(root, dirUri)
+      }
+      if (name === '.copilotignore') {
+        const fileUri = vscode.Uri.joinPath(folder, '.copilotignore')
+        const localPatterns = await this.readIgnorePatterns(fileUri)
+        if (localPatterns.length) {
+          // These patterns are as read from the file. If file is in root of workspace, this is as expected.
+          // If file is in a subfolder, we need to prefix appropriately.
+          const relativePath = folder.fsPath.replace(root.fsPath, '').replace(/^\//, '')
+          let patterns = ignore.default()
+          patterns.add(localPatterns)
+          this.log.info(`[findIgnoreFiles] relativePath ${relativePath} has ${localPatterns.length} patterns`)
+          this.patterns.set(relativePath, patterns)
+          this.count += localPatterns.length
+        }
+      }
     }
   }
 
   async fillPatterns() {
     try {
       this.count = 0
-      this.patterns = ignore()
+      this.patterns.clear()
+      this.patterns.set("", ignore.default())
 
       if (vscode.workspace.workspaceFolders?.length) {
         for (const folder of vscode.workspace.workspaceFolders) {
-          const fileUri = vscode.Uri.joinPath(folder.uri, '.copilotignore')
-          const localPatterns = await this.readIgnorePatterns(fileUri)
-          if (localPatterns.length) {
-            this.patterns.add(localPatterns)
-            this.count += localPatterns.length
-          }
+          await this.findIgnoreFiles(folder.uri, folder.uri)
         }
       }
 
@@ -212,7 +296,7 @@ class Extension {
         const fileUri = vscode.Uri.file(path.join(process.env.HOME, '.copilotignore'))
         const globalPatterns = await this.readIgnorePatterns(fileUri)
         if (globalPatterns.length) {
-          this.patterns.add(globalPatterns)
+          this.patterns.get("")?.add(globalPatterns)
           this.count += globalPatterns.length
         }
       }
@@ -247,7 +331,6 @@ class Extension {
     this.log.info(`[setCopilotStateBasedOnVisibleEditors] New enabled state from files: ${!foundOpenIgnoredFile}`)
     this.setConfigEnabled(!foundOpenIgnoredFile)
   }
-
 }
 
 export function activate(context: vscode.ExtensionContext) {
