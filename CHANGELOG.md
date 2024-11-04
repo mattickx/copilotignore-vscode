@@ -2,6 +2,10 @@
 
 All notable changes to the "copilotignore" extension will be documented in this file.
 
+## [0.1.8] - 2024-10-30
+
+- Hotfixes `debounce` function, binding `this`
+
 ## [0.1.7] - 2024-10-29
 
 - Greatly improve functionallity of state change, by using the copilot extension context ([26b073f](https://github.com/mattickx/copilotignore-vscode/commit/26b073f5d103810695b75d39c03ddda070508bed))
