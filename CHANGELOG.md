@@ -2,6 +2,11 @@
 
 All notable changes to the "copilotignore" extension will be documented in this file.
 
+## [0.1.9] - 2024-11-07
+
+- Functionality to allow .copilotignore files in subdirectories ([#13](https://github.com/mattickx/copilotignore-vscode/pull/13/files) by @rgr21)
+- Documentation improvement, TODO-list updates
+
 ## [0.1.8] - 2024-10-30
 
 - Hotfixes `debounce` function, binding `this`
